@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Mend Scan') {
             steps {
-                chmod +x  'mend-artifactoryScan.groovy'
+                sh 'chmod +x mend-artifactoryScan.groovy' // Correct way to execute a shell command
                 sh './mend-artifactoryScan.groovy' 
             }
         }
