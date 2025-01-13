@@ -1,4 +1,3 @@
-#!/usr/bin/env groovy
 import groovy.util.logging.Slf4j
 
 @Slf4j
