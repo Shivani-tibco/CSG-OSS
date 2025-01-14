@@ -1,12 +1,15 @@
 pipeline {
-    agent any
+    agent any 
 
     stages {
-        stage('Mend Scan') {
+        stage('Artifactory Scan') {
             steps {
-                sh 'chmod +x mend-artifactoryScan.groovy' // Correct way to execute a shell command
-                sh './mend-artifactoryScan.groovy' 
+                // Assuming your mend-artifactoryScan.groovy and 
+                // wss-unified-agent.config are in the same directory
+                // as your Jenkinsfile
+                sh 'groovy mend-artifactoryScan.groovy' 
             }
         }
+        // Add other stages as needed (build, deploy, etc.)
     }
 }
