@@ -1,77 +1,73 @@
 #!/usr/bin/env groovy
 import groovy.util.logging.Slf4j
+import java.nio.file.Files
+import java.nio.file.Paths
 
 @Slf4j
 class ArtifactoryScanner {
 
     static void main(String[] args) {
-        def configFile = new File('artifactory_scan_config')
-        def config = loadConfig(configFile)
 
-        if (!config) {
-            log.error("Failed to load configuration from ${configFile.absolutePath}")
+        // Download WSS Unified Agent if it doesn't exist
+        downloadWssAgent()
+
+        // Run Artifactory Scan 
+        runArtifactoryScan()
+
+        // Upload Report to Artifactory (Placeholder - Implementation needed)
+        // uploadReportToArtifactory() 
+    }
+
+    static void downloadWssAgent() {
+        def wssAgentFileName = "jfrog.exe"
+        def downloadUrl = "https://releases.jfrog.io/artifactory/jfrog-cli/v2/latest/win64/jfrog.exe" 
+
+        if (!new File(wssAgentFileName).exists()) {
+            log.info("Downloading WSS Unified Agent from ${downloadUrl} ...")
+            try {
+                Files.copy(new URL(downloadUrl).openStream(), Paths.get(wssAgentFileName))
+                log.info("WSS Unified Agent downloaded.")
+            } catch (IOException e) {
+                log.error("Error downloading WSS Unified Agent: ${e.message}")
+            }
+        } else {
+            log.info("WSS Unified Agent already exists.")
+        }
+    }
+
+    static void runArtifactoryScan() {
+        def configFilePath = 'wss-unified-agent.config'
+
+        // Check if the config file exists
+        if (!new File(configFilePath).exists()) {
+            log.error("Error: WSS Unified Agent config file '${configFilePath}' not found.")
             return
         }
 
-        // Download WSS Unified Agent (if not already present)
-        downloadWssAgent()
-
-        // Run Artifactory Scan for each URL
-        config['artifactory.urls'].each { url ->
-            runArtifactoryScan(config, url)
-        }
-
-        // Upload Report to Artifactory (Placeholder)
-        // uploadReportToArtifactory(config) 
-    }
-
-    static Map<String, String> loadConfig(File configFile) {
-        def config = [:]
-        try {
-            configFile.withReader { reader ->
-                reader.eachLine { line ->
-                    if (line.trim() && !line.startsWith("#")) { 
-                        def parts = line.split("=")
-                        config[parts[0].trim()] = parts[1].trim()
-                    }
-                }
-            }
-        } catch (IOException e) {
-            log.error("Error reading configuration file: ${e.message}")
-            return null
-        }
-        // Assuming 'artifactory.urls' is a comma-separated list in the config file
-        config['artifactory.urls'] = config['artifactory.urls'].split(",").collect { it.trim() } 
-        return config
-    }
-
-    static void downloadWssAgent() { 
-        // ... (Same as before) ...
-    }
-
-    static void runArtifactoryScan(Map<String, String> config, String artifactoryUrl) {
         def command = [
-                'wss-unified-agent.exe',
-                'scan', 
-                '-Dartifactory.url=' + artifactoryUrl,
-                '-Dartifactory.repoKeys=' + config['artifactory.repoKeys'],
-                // Add other necessary command-line options here 
-                // based on your specific WSS Unified Agent configuration
+            'jfrog.exe', 
+            'rt', 
+            'scan', 
+            '--config', configFilePath 
         ]
 
-        log.info("Running Artifactory scan for ${artifactoryUrl} with command: ${command.join(' ')}")
+        log.info("Running Artifactory scan with command: ${command.join(' ')}")
         try {
             def process = command.execute()
             process.waitFor()
-            log.info("Artifactory scan for ${artifactoryUrl} completed.")
+
+            // Print the output of the scan
+            process.in.eachLine { line -> log.info(line) }
+
+            log.info("Artifactory scan completed.")
         } catch (IOException e) {
-            log.error("Error executing scan command for ${artifactoryUrl}: ${e.message}")
+            log.error("Error executing scan command: ${e.message}")
         }
     }
 
     // Placeholder for Artifactory upload logic
-    // static void uploadReportToArtifactory(Map<String, String> config) {
+    // static void uploadReportToArtifactory() {
     //     // Implement Artifactory upload logic here 
-    //     // using the config properties and the generated report files
+    //     // using the generated report files
     // }
 }
